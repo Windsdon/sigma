@@ -28,6 +28,7 @@
 #include <SFML/Graphics.hpp>
 #include "SigmaServer.h"
 #include <mutex>
+#include "LightsController.h"
 
 using namespace std;
 
@@ -49,6 +50,9 @@ class SigmaClient {
 		void close();
 
 	private:
+		ostream dump;
+		bool doLog;
+		ostream& log();
 		void load();
 
 		void loop();
@@ -63,7 +67,8 @@ class SigmaClient {
 		void renderGame();
 
 		void blackout(unsigned id);
-		void highlight(unsigned id, unsigned r = 255, unsigned g = 255, unsigned b = 0);
+		void highlight(unsigned id, unsigned r = 255, unsigned g = 255,
+				unsigned b = 0);
 
 		void windowResize();
 		void fullscreenToggle();
@@ -78,6 +83,12 @@ class SigmaClient {
 		sf::Clock timer;
 		float transp;
 		mutex lock;
+
+		enum GameMode {
+			MENU,
+			GAME
+		};
+		GameMode mode;
 
 		vector<sf::FloatRect> blocks;
 
@@ -94,6 +105,9 @@ class SigmaClient {
 		sf::Texture boardTexture;
 		sf::Sprite boardSprite;
 
+		sf::Texture bgTexture;
+		sf::Sprite bgSprite;
+
 		sf::Texture xTexture;
 		sf::Sprite xSprite;
 
@@ -104,6 +118,9 @@ class SigmaClient {
 
 		Phase currentPhase;
 		unsigned currentTileset;
+
+		LightsController lights;
+		double scale;
 };
 
 #endif /* SIGMACLIENT_H_ */

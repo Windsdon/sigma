@@ -48,7 +48,8 @@ class SigmaServer {
 		void stop();
 
 	private:
-
+		bool doLog;
+		ostream dump;
 		ostream& log();
 
 		void receivePacket(ServerPacket &p);

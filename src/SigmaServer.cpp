@@ -27,7 +27,7 @@
 
 using namespace std;
 
-SigmaServer::SigmaServer() {
+SigmaServer::SigmaServer(): dump(0) {
 	currentSuperPos = 0;
 	currentPlayer = 0;
 	currentPhase = Phase::WaitingConnection;
@@ -38,6 +38,10 @@ SigmaServer::SigmaServer() {
 
 	subGameX = 0;
 	subGameY = 0;
+	targetX = 0;
+	targetY = 0;
+
+	doLog = false;
 }
 
 SigmaServer::~SigmaServer() {
@@ -46,7 +50,7 @@ SigmaServer::~SigmaServer() {
 void SigmaServer::start() {
 	running = true;
 	while (running) {
-		cout << "Server loop" << endl;
+		log() << "Server loop" << endl;
 		needsLoop = false;
 		loop();
 
@@ -64,6 +68,9 @@ void SigmaServer::stop() {
 }
 
 ostream& SigmaServer::log() {
+	if(!doLog) {
+		return dump;
+	}
 	return cout << "[SERVER] ";
 }
 
@@ -466,7 +473,7 @@ void SigmaServer::doVictoryCheck() {
 	}
 
 	changePlayer();
-	if (superGame[targetY][targetX] || (targetX == subGameX && targetY == subGameY)) {
+	if (superGame[targetY][targetX]) {
 		currentPhase = Phase::ChooseSuper;
 		sendPacketChangePhase(currentPhase);
 	} else {

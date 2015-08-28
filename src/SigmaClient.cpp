@@ -30,7 +30,8 @@ using namespace std;
 #define THIRD 0.333333333
 
 SigmaClient::SigmaClient() :
-		board(Board(90, 0)), hovers(Board(90, 0)), server(NULL) {
+		dump(0), board(Board(90, 0)), hovers(Board(90, 0)), server(NULL), lights(
+				0.5) {
 	running = false;
 	window = NULL;
 	currentPhase = Phase::WaitingConnection;
@@ -98,23 +99,36 @@ SigmaClient::SigmaClient() :
 
 	transp = 0;
 
+	doLog = false;
+
 	server = new SigmaServer();
 	server->sp = this;
 
 	new thread([this] {
-		cout << "Server start!" << endl;
+		log() << "Server start!" << endl;
 		server->start();
-		cout << "Server end!" << endl;
+		log() << "Server end!" << endl;
 	});
+
+	mode = GAME;
 
 }
 
 SigmaClient::~SigmaClient() {
 }
 
+ostream& SigmaClient::log() {
+	if (!doLog) {
+		return dump;
+	}
+	return cout << "[CLIENT] ";
+}
+
 void SigmaClient::start() {
 	load();
 	initWindow();
+
+	lights.start();
 
 	running = true;
 	while (running) {
@@ -154,8 +168,14 @@ void SigmaClient::events() {
 					case sf::Keyboard::F:
 						fullscreenToggle();
 						break;
+					case sf::Keyboard::F5:
+						lights.start();
+						break;
+					case sf::Keyboard::F6:
+						lights.stop();
+						break;
 					default:
-						cout << "Pressed " << e.key.code << endl;
+						log() << "Pressed " << e.key.code << endl;
 				}
 				break;
 			case sf::Event::MouseMoved:
@@ -213,11 +233,19 @@ void SigmaClient::procClick() {
 void SigmaClient::render() {
 	transp = (sin(timer.getElapsedTime().asSeconds() * 2) + 1) / 4 + 0.5;
 	window->clear(sf::Color::Black);
-	renderGame();
+	switch (mode) {
+		case MENU:
+			renderMenus();
+			break;
+		case GAME:
+			renderGame();
+			break;
+	}
 	window->display();
 }
 
 void SigmaClient::renderMenus() {
+	window->draw(bgSprite);
 }
 
 void SigmaClient::renderGame() {
@@ -268,6 +296,11 @@ void SigmaClient::renderGame() {
 			}
 		}
 	}
+
+	lights.update();
+	sf::RenderStates lightsState;
+	lightsState.transform.scale(scale * 2, scale * 2);
+	lights.draw(*window, lightsState);
 }
 
 void SigmaClient::blackout(unsigned id) {
@@ -291,6 +324,10 @@ void SigmaClient::load() {
 	boardTexture.setSmooth(true);
 	boardSprite.setTexture(boardTexture, true);
 
+	bgTexture.loadFromFile("res/bgmain.png");
+	bgTexture.setSmooth(true);
+	bgSprite.setTexture(bgTexture, true);
+
 	xTexture.loadFromFile("res/x.png");
 	xTexture.setSmooth(false);
 	xSprite.setTexture(xTexture, true);
@@ -302,6 +339,8 @@ void SigmaClient::load() {
 	oSprite.setTexture(oTexture, true);
 	oSprite.setScale(1.0 / 360.0, 1.0 / 360.0);
 	oSprite.setOrigin(0, 0);
+
+	lights.load();
 }
 
 void SigmaClient::windowResize() {
@@ -315,9 +354,11 @@ void SigmaClient::windowResize() {
 			wsize.y, wsize.y);
 
 	double spriteScale = wsize.y / ((double) boardTexture.getSize().y);
-	cout << "scale: " << spriteScale << endl;
+	log() << "scale: " << spriteScale << endl;
 	boardSprite.setScale(spriteScale, spriteScale);
 	boardSprite.setPosition(0, 0);
+
+	scale = spriteScale;
 }
 
 void SigmaClient::fullscreenToggle() {
@@ -351,15 +392,15 @@ void SigmaClient::initWindow() {
 }
 
 void SigmaClient::receivePacket(ServerPacket& packet) {
-	cout << "Got a packet: " << packet.type << endl;
-	cout << "Waiting mutex" << endl;
+	log() << "Got a packet: " << packet.type << endl;
+	log() << "Waiting mutex" << endl;
 	lock_guard<mutex> lm(lock);
-	cout << "Got mutex!" << endl;
+	log() << "Got mutex!" << endl;
 	switch (packet.type) {
 		case ServerPacket::ConnectionAccept:
 			break;
 		case ServerPacket::BoardState:
-			cout << "Setting board state" << endl;
+			log() << "Setting board state" << endl;
 			board = packet.board->state;
 			break;
 		case ServerPacket::TilesetChange:
@@ -381,13 +422,13 @@ void SigmaClient::receivePacket(ServerPacket& packet) {
 
 void SigmaClient::sendPacket(ServerPacket& packet) {
 	if (server) {
-		cout << "Sending packet" << endl;
+		log() << "Sending packet" << endl;
 		ServerPacket *p = new ServerPacket(packet);
 		new thread([this, p] {
-			cout << "Sender thread start!" << endl;
+			log() << "Sender thread start!" << endl;
 			server->receivePacket(*p);
 			delete p;
-			cout << "Sender thread end!" << endl;
+			log() << "Sender thread end!" << endl;
 		});
 	}
 }
