@@ -29,6 +29,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include <set>
 
 class SigmaClient;
 using namespace std;
@@ -36,6 +37,8 @@ using namespace std;
 class SigmaServer {
 	public:
 		typedef vector<unsigned> Board;
+		typedef vector<pair<unsigned, unsigned>> PairVec;
+		typedef unsigned uint;
 		friend class SigmaClient;
 
 		SigmaServer();
@@ -58,9 +61,11 @@ class SigmaServer {
 		void sendPacketChangeCell(unsigned id, unsigned val);
 		void sendPacketBoardState();
 		void sendPacketChangeTileset(unsigned tileset);
+		void sendPacketChangeInteraction(unsigned player, bool interaction);
 
 		vector<vector<unsigned> > getSubGame(unsigned x, unsigned y);
 		vector<vector<unsigned> > getSuperGame();
+		void onlyPlayer(vector<vector<unsigned> >&);
 
 		void loop();
 
@@ -70,6 +75,8 @@ class SigmaServer {
 		void procClick(ServerPacket &);
 		void procChooseSuper(unsigned id);
 		void procChooseCell(unsigned id);
+		void doVictoryCheck();
+		void changePlayer();
 
 		void boardSetAndNotify(unsigned id, unsigned val);
 		void boardSetAndNotify(vector<pair<unsigned, unsigned> > vals);
@@ -81,7 +88,7 @@ class SigmaServer {
 
 		bool isInSubGame(unsigned x, unsigned y, unsigned i);
 
-		int victoryCheck(vector<vector<unsigned> >);
+		int victoryCheck(vector<vector<unsigned> >, PairVec&);
 
 		bool running;
 
@@ -93,11 +100,16 @@ class SigmaServer {
 		unsigned subGameX;
 		unsigned subGameY;
 
+		unsigned targetX;
+		unsigned targetY;
+
 		mutex loopMutex;
 		condition_variable loopUnlocker;
 		bool needsLoop;
 
 		SigmaClient *sp;
+
+		set<pair<uint,uint> > done;
 };
 
 #endif /* SIGMASERVER_H_ */

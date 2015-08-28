@@ -354,6 +354,7 @@ void SigmaClient::receivePacket(ServerPacket& packet) {
 	cout << "Got a packet: " << packet.type << endl;
 	cout << "Waiting mutex" << endl;
 	lock_guard<mutex> lm(lock);
+	cout << "Got mutex!" << endl;
 	switch (packet.type) {
 		case ServerPacket::ConnectionAccept:
 			break;
